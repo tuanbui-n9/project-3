@@ -6,10 +6,14 @@
   "author": "Tuan Bui <tuanbui.n9@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "compression": "^1.7.4",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mongoose": "^8.4.1"
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "mongoose": "^8.4.1",
+    "scrypto": "^1.0.3"
   },
   "devDependencies": {
     "helmet": "^7.1.0",
