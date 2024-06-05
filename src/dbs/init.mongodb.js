@@ -2,8 +2,9 @@
 
 const mongoose = require('mongoose');
 const { countConnect } = require('../helpers/check.connect');
+const { db } = require('../configs/config.mongodb');
 
-const connectString = 'mongodb://mongoadmin:mongopass@localhost:27017';
+const connectString = db.uri;
 
 class Database {
   constructor() {
