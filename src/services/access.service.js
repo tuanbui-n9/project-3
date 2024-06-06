@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const KeyTokenService = require('./keyToken.service');
 const { createTokenPair } = require('../auth/authUtils');
 const { getInfoData } = require('../utils');
-const { BadRequestError } = require('../core/error.response');
+const { BadRequestError, AuthFailureError } = require('../core/error.response');
+const { findByEmail } = require('./shop.service');
 
 const RoleShop = {
   SHOP: 'SHOP',
@@ -17,7 +18,46 @@ const RoleShop = {
 
 class AccessService {
   static login = async ({ email, password, refreshToken = null }) => {
-    const holderShop = await shopModel.findOne({ email }).lean();
+    const foundShop = await findByEmail({ email });
+
+    if (!foundShop) {
+      throw new BadRequestError('Error: Shop not found');
+    }
+
+    const match = await bcrypt.compare(password, foundShop.password);
+    if (!match) {
+      throw new AuthFailureError('Authentication failed');
+    }
+
+    const privateKey = crypto.randomBytes(64).toString('hex');
+    const publicKey = crypto.randomBytes(64).toString('hex');
+    const tokens = await createTokenPair(
+      { userId: foundShop._id, email },
+      publicKey,
+      privateKey
+    );
+
+    await KeyTokenService.createKeyToken({
+      refreshToken: tokens.refreshToken,
+      userId: foundShop._id,
+      publicKey,
+      privateKey,
+    });
+
+    await KeyTokenService.createKeyToken({
+      userId: foundShop._id,
+      publicKey,
+      privateKey,
+      refreshToken,
+    });
+
+    return {
+      shop: getInfoData({
+        fields: ['_id', 'name', 'email'],
+        object: foundShop,
+      }),
+      tokens,
+    };
   };
 
   static signUp = async ({ name, email, password }) => {
@@ -26,7 +66,6 @@ class AccessService {
       throw new BadRequestError('Error: Shop already registered');
     }
 
-    console.log(3333);
     const passwordHash = await bcrypt.hash(password, 10);
     const newShop = await shopModel.create({
       name,
@@ -74,6 +113,10 @@ class AccessService {
       code: 200,
       metadata: null,
     };
+  };
+
+  static logout = async ({ keyStore }) => {
+    return KeyTokenService.removeKeyById(keyStore._id);
   };
 }
 
